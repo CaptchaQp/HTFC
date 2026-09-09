@@ -7,10 +7,14 @@ using UnityEngine;
 [BepInPlugin("com.newmc.howtofishcheat", "HowToFish Cheat", "1.0.0")]
 public class Plugin : BaseUnityPlugin
 {
+    // =========================================================
+    // MENU
+    // =========================================================
+
     private bool menuOpen = false;
     private bool stylesCreated = false;
 
-    private Rect windowRect = new Rect(50, 50, 650, 430);
+    private Rect windowRect = new Rect(50, 50, 650, 470);
 
     private int currentTab = 0;
 
@@ -23,18 +27,30 @@ public class Plugin : BaseUnityPlugin
         "Misc"
     };
 
-    // Player settings
+    // =========================================================
+    // PLAYER
+    // =========================================================
+
     private float walkMultiplier = 1.0f;
     private float sprintMultiplier = 1.0f;
 
     private float originalWalkSpeed = -1f;
     private float originalSprintSpeed = -1f;
 
-    // Saved position
     private Vector3 savedPosition;
     private bool hasSavedPosition = false;
 
-    // GUI styles
+    // =========================================================
+    // MONEY
+    // =========================================================
+
+    private bool infiniteMoney = false;
+    private float moneyTimer = 0f;
+
+    // =========================================================
+    // GUI STYLES
+    // =========================================================
+
     private GUIStyle windowStyle;
     private GUIStyle titleStyle;
     private GUIStyle tabStyle;
@@ -46,18 +62,44 @@ public class Plugin : BaseUnityPlugin
     private GUIStyle footerStyle;
     private GUIStyle boxStyle;
 
+    // =========================================================
+    // START
+    // =========================================================
+
     private void Awake()
     {
         Logger.LogInfo("HowToFish Cheat loaded!");
     }
 
+    // =========================================================
+    // UPDATE
+    // =========================================================
+
     private void Update()
     {
+        // F2 = open/close menu
         if (Input.GetKeyDown(KeyCode.F2))
         {
             menuOpen = !menuOpen;
         }
+
+        // Infinite money
+        if (infiniteMoney)
+        {
+            moneyTimer += Time.deltaTime;
+
+            if (moneyTimer >= 0.5f)
+            {
+                moneyTimer = 0f;
+
+                AddMoney(99999);
+            }
+        }
     }
+
+    // =========================================================
+    // GUI
+    // =========================================================
 
     private void OnGUI()
     {
@@ -79,6 +121,10 @@ public class Plugin : BaseUnityPlugin
         );
     }
 
+    // =========================================================
+    // GUI STYLES
+    // =========================================================
+
     private void CreateStyles()
     {
         windowStyle = new GUIStyle(GUI.skin.window);
@@ -89,7 +135,6 @@ public class Plugin : BaseUnityPlugin
         titleStyle = new GUIStyle(GUI.skin.label);
         titleStyle.fontSize = 20;
         titleStyle.fontStyle = FontStyle.Bold;
-        titleStyle.alignment = TextAnchor.MiddleLeft;
 
         tabStyle = new GUIStyle(GUI.skin.button);
         tabStyle.fontSize = 14;
@@ -102,11 +147,9 @@ public class Plugin : BaseUnityPlugin
         headerStyle = new GUIStyle(GUI.skin.label);
         headerStyle.fontSize = 15;
         headerStyle.fontStyle = FontStyle.Bold;
-        headerStyle.padding = new RectOffset(0, 8, 5, 5);
 
         labelStyle = new GUIStyle(GUI.skin.label);
         labelStyle.fontSize = 13;
-        labelStyle.padding = new RectOffset(0, 3, 0, 3);
 
         valueStyle = new GUIStyle(GUI.skin.label);
         valueStyle.fontSize = 13;
@@ -125,18 +168,23 @@ public class Plugin : BaseUnityPlugin
         boxStyle.padding = new RectOffset(12, 12, 10, 10);
     }
 
+    // =========================================================
+    // MAIN WINDOW
+    // =========================================================
+
     private void DrawWindow(int windowID)
     {
         GUILayout.BeginHorizontal();
 
-        // LEFT TAB MENU
+        // LEFT SIDE
         GUILayout.BeginVertical(GUILayout.Width(145));
 
         GUILayout.Space(5);
 
         for (int i = 0; i < tabs.Length; i++)
         {
-            GUIStyle style = currentTab == i
+            GUIStyle style =
+                currentTab == i
                 ? activeTabStyle
                 : tabStyle;
 
@@ -152,7 +200,7 @@ public class Plugin : BaseUnityPlugin
         GUILayout.FlexibleSpace();
 
         GUILayout.Label(
-            "F2  -  Toggle Menu",
+            "F2 - Toggle Menu",
             footerStyle
         );
 
@@ -160,7 +208,7 @@ public class Plugin : BaseUnityPlugin
 
         GUILayout.Space(10);
 
-        // CONTENT
+        // RIGHT SIDE
         GUILayout.BeginVertical(boxStyle);
 
         switch (currentTab)
@@ -190,7 +238,10 @@ public class Plugin : BaseUnityPlugin
 
         GUILayout.EndHorizontal();
 
-        GUI.DragWindow(new Rect(0, 0, 650, 35));
+        // Drag window
+        GUI.DragWindow(
+            new Rect(0, 0, 650, 35)
+        );
     }
 
     // =========================================================
@@ -203,9 +254,12 @@ public class Plugin : BaseUnityPlugin
 
         GUILayout.Space(8);
 
-        GUILayout.Label("MOVEMENT", headerStyle);
+        // MOVEMENT
+        GUILayout.Label(
+            "MOVEMENT",
+            headerStyle
+        );
 
-        // Walk speed
         GUILayout.BeginHorizontal();
 
         GUILayout.Label(
@@ -214,22 +268,25 @@ public class Plugin : BaseUnityPlugin
             GUILayout.Width(120)
         );
 
-        float newWalkMultiplier = GUILayout.HorizontalSlider(
-            walkMultiplier,
-            0.5f,
-            5.0f,
-            GUILayout.Width(220)
-        );
+        float newWalkMultiplier =
+            GUILayout.HorizontalSlider(
+                walkMultiplier,
+                0.5f,
+                5.0f,
+                GUILayout.Width(220)
+            );
 
         GUILayout.Label(
-            string.Format("{0:0.0}x", newWalkMultiplier),
+            string.Format(
+                "{0:0.0}x",
+                newWalkMultiplier
+            ),
             valueStyle,
             GUILayout.Width(50)
         );
 
         GUILayout.EndHorizontal();
 
-        // Sprint speed
         GUILayout.BeginHorizontal();
 
         GUILayout.Label(
@@ -238,24 +295,29 @@ public class Plugin : BaseUnityPlugin
             GUILayout.Width(120)
         );
 
-        float newSprintMultiplier = GUILayout.HorizontalSlider(
-            sprintMultiplier,
-            0.5f,
-            5.0f,
-            GUILayout.Width(220)
-        );
+        float newSprintMultiplier =
+            GUILayout.HorizontalSlider(
+                sprintMultiplier,
+                0.5f,
+                5.0f,
+                GUILayout.Width(220)
+            );
 
         GUILayout.Label(
-            string.Format("{0:0.0}x", newSprintMultiplier),
+            string.Format(
+                "{0:0.0}x",
+                newSprintMultiplier
+            ),
             valueStyle,
             GUILayout.Width(50)
         );
 
         GUILayout.EndHorizontal();
 
-        // Apply changed values
-        if (Mathf.Abs(newWalkMultiplier - walkMultiplier) > 0.001f ||
-            Mathf.Abs(newSprintMultiplier - sprintMultiplier) > 0.001f)
+        if (Mathf.Abs(
+            newWalkMultiplier - walkMultiplier) > 0.001f ||
+            Mathf.Abs(
+            newSprintMultiplier - sprintMultiplier) > 0.001f)
         {
             walkMultiplier = newWalkMultiplier;
             sprintMultiplier = newSprintMultiplier;
@@ -265,8 +327,11 @@ public class Plugin : BaseUnityPlugin
 
         GUILayout.Space(15);
 
-        // PLAYER STATE
-        GUILayout.Label("PLAYER STATE", headerStyle);
+        // RESET
+        GUILayout.Label(
+            "PLAYER STATE",
+            headerStyle
+        );
 
         if (GUILayout.Button(
             "Reset Speed",
@@ -279,26 +344,40 @@ public class Plugin : BaseUnityPlugin
         GUILayout.Space(15);
 
         // POSITION
-        GUILayout.Label("POSITION", headerStyle);
+        GUILayout.Label(
+            "POSITION",
+            headerStyle
+        );
 
-        Transform playerTransform = GetPlayerTransform();
+        Transform playerTransform =
+            GetPlayerTransform();
 
         if (playerTransform != null)
         {
-            Vector3 position = playerTransform.position;
+            Vector3 position =
+                playerTransform.position;
 
             GUILayout.Label(
-                string.Format("X: {0:0.00}", position.x),
+                string.Format(
+                    "X: {0:0.00}",
+                    position.x
+                ),
                 labelStyle
             );
 
             GUILayout.Label(
-                string.Format("Y: {0:0.00}", position.y),
+                string.Format(
+                    "Y: {0:0.00}",
+                    position.y
+                ),
                 labelStyle
             );
 
             GUILayout.Label(
-                string.Format("Z: {0:0.00}", position.z),
+                string.Format(
+                    "Z: {0:0.00}",
+                    position.z
+                ),
                 labelStyle
             );
 
@@ -321,21 +400,6 @@ public class Plugin : BaseUnityPlugin
             }
 
             GUILayout.EndHorizontal();
-
-            if (hasSavedPosition)
-            {
-                GUILayout.Space(5);
-
-                GUILayout.Label(
-                    string.Format(
-                        "Saved: {0:0.00}, {1:0.00}, {2:0.00}",
-                        savedPosition.x,
-                        savedPosition.y,
-                        savedPosition.z
-                    ),
-                    labelStyle
-                );
-            }
         }
         else
         {
@@ -344,15 +408,141 @@ public class Plugin : BaseUnityPlugin
                 labelStyle
             );
         }
+
+        GUILayout.Space(15);
+
+        // MONEY
+        GUILayout.Label(
+            "MONEY",
+            headerStyle
+        );
+
+        GUILayout.BeginHorizontal();
+
+        if (GUILayout.Button(
+            "+ $1,000",
+            buttonStyle,
+            GUILayout.Width(120)))
+        {
+            AddMoney(1000);
+        }
+
+        if (GUILayout.Button(
+            "+ $10,000",
+            buttonStyle,
+            GUILayout.Width(120)))
+        {
+            AddMoney(10000);
+        }
+
+        if (GUILayout.Button(
+            "+ $99,999",
+            buttonStyle,
+            GUILayout.Width(120)))
+        {
+            AddMoney(99999);
+        }
+
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(8);
+
+        bool newInfiniteMoney =
+            GUILayout.Toggle(
+                infiniteMoney,
+                "Infinite Money"
+            );
+
+        if (newInfiniteMoney != infiniteMoney)
+        {
+            infiniteMoney = newInfiniteMoney;
+            moneyTimer = 0f;
+        }
     }
 
     // =========================================================
-    // FISHING TAB
+    // MONEY
+    // =========================================================
+
+    private void AddMoney(int amount)
+    {
+        object player =
+            GetLocalPlayer();
+
+        if (player == null)
+        {
+            Logger.LogWarning(
+                "Cannot add money: local player not found."
+            );
+
+            return;
+        }
+
+        Type moneyManagerType =
+            FindType("MoneyManager");
+
+        if (moneyManagerType == null)
+        {
+            Logger.LogWarning(
+                "Could not find MoneyManager."
+            );
+
+            return;
+        }
+
+        MethodInfo addMoneyMethod =
+            moneyManagerType.GetMethod(
+                "AddMoney",
+                BindingFlags.Public |
+                BindingFlags.Static
+            );
+
+        if (addMoneyMethod == null)
+        {
+            Logger.LogWarning(
+                "Could not find MoneyManager.AddMoney."
+            );
+
+            return;
+        }
+
+        try
+        {
+            addMoneyMethod.Invoke(
+                null,
+                new object[]
+                {
+                    amount,
+                    player
+                }
+            );
+
+            Logger.LogInfo(
+                string.Format(
+                    "AddMoney called with {0}.",
+                    amount
+                )
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                "AddMoney failed: " +
+                ex.Message
+            );
+        }
+    }
+
+    // =========================================================
+    // FISHING
     // =========================================================
 
     private void DrawFishingTab()
     {
-        GUILayout.Label("FISHING", titleStyle);
+        GUILayout.Label(
+            "FISHING",
+            titleStyle
+        );
 
         GUILayout.Space(10);
 
@@ -360,25 +550,18 @@ public class Plugin : BaseUnityPlugin
             "Fishing features will be added here.",
             labelStyle
         );
-
-        GUILayout.Space(10);
-
-        if (GUILayout.Button(
-            "Test Fishing Feature",
-            buttonStyle,
-            GUILayout.Width(200)))
-        {
-            Logger.LogInfo("Fishing button pressed.");
-        }
     }
 
     // =========================================================
-    // INVENTORY TAB
+    // INVENTORY
     // =========================================================
 
     private void DrawInventoryTab()
     {
-        GUILayout.Label("INVENTORY", titleStyle);
+        GUILayout.Label(
+            "INVENTORY",
+            titleStyle
+        );
 
         GUILayout.Space(10);
 
@@ -386,33 +569,28 @@ public class Plugin : BaseUnityPlugin
             "Inventory features will be added here.",
             labelStyle
         );
-
-        GUILayout.Space(10);
-
-        if (GUILayout.Button(
-            "Test Inventory Feature",
-            buttonStyle,
-            GUILayout.Width(200)))
-        {
-            Logger.LogInfo("Inventory button pressed.");
-        }
     }
 
     // =========================================================
-    // TELEPORT TAB
+    // TELEPORT
     // =========================================================
 
     private void DrawTeleportTab()
     {
-        GUILayout.Label("TELEPORT", titleStyle);
+        GUILayout.Label(
+            "TELEPORT",
+            titleStyle
+        );
 
         GUILayout.Space(10);
 
-        Transform playerTransform = GetPlayerTransform();
+        Transform playerTransform =
+            GetPlayerTransform();
 
         if (playerTransform != null)
         {
-            Vector3 pos = playerTransform.position;
+            Vector3 pos =
+                playerTransform.position;
 
             GUILayout.Label(
                 string.Format(
@@ -452,12 +630,15 @@ public class Plugin : BaseUnityPlugin
     }
 
     // =========================================================
-    // MISC TAB
+    // MISC
     // =========================================================
 
     private void DrawMiscTab()
     {
-        GUILayout.Label("MISC", titleStyle);
+        GUILayout.Label(
+            "MISC",
+            titleStyle
+        );
 
         GUILayout.Space(10);
 
@@ -465,25 +646,16 @@ public class Plugin : BaseUnityPlugin
             "Miscellaneous features will be added here.",
             labelStyle
         );
-
-        GUILayout.Space(10);
-
-        if (GUILayout.Button(
-            "Test Button",
-            buttonStyle,
-            GUILayout.Width(200)))
-        {
-            Logger.LogInfo("Misc button pressed.");
-        }
     }
 
     // =========================================================
-    // FIND LOCAL PLAYER
+    // LOCAL PLAYER
     // =========================================================
 
     private object GetLocalPlayer()
     {
-        Type playerType = FindType("Player");
+        Type playerType =
+            FindType("Player");
 
         if (playerType == null)
         {
@@ -494,11 +666,12 @@ public class Plugin : BaseUnityPlugin
             return null;
         }
 
-        FieldInfo localPlayerField = playerType.GetField(
-            "LocalPlayer",
-            BindingFlags.Public |
-            BindingFlags.Static
-        );
+        FieldInfo localPlayerField =
+            playerType.GetField(
+                "LocalPlayer",
+                BindingFlags.Public |
+                BindingFlags.Static
+            );
 
         if (localPlayerField == null)
         {
@@ -513,21 +686,23 @@ public class Plugin : BaseUnityPlugin
     }
 
     // =========================================================
-    // FIND PLAYER MOVEMENT
+    // MOVEMENT
     // =========================================================
 
     private object GetMovement()
     {
-        object player = GetLocalPlayer();
+        object player =
+            GetLocalPlayer();
 
         if (player == null)
             return null;
 
-        FieldInfo movementField = player.GetType().GetField(
-            "_movement",
-            BindingFlags.NonPublic |
-            BindingFlags.Instance
-        );
+        FieldInfo movementField =
+            player.GetType().GetField(
+                "_movement",
+                BindingFlags.NonPublic |
+                BindingFlags.Instance
+            );
 
         if (movementField == null)
         {
@@ -541,132 +716,96 @@ public class Plugin : BaseUnityPlugin
         return movementField.GetValue(player);
     }
 
-    // =========================================================
-    // FIND PLAYER TRANSFORM
-    // =========================================================
-
-    private Transform GetPlayerTransform()
-    {
-        object player = GetLocalPlayer();
-
-        if (player == null)
-            return null;
-
-        Component component = player as Component;
-
-        if (component == null)
-        {
-            Logger.LogWarning(
-                "Player is not a Unity Component."
-            );
-
-            return null;
-        }
-
-        return component.transform;
-    }
-
-    // =========================================================
-    // APPLY MOVEMENT SPEED
-    // =========================================================
-
     private void ApplyMovementSpeed()
     {
-        object movement = GetMovement();
+        object movement =
+            GetMovement();
 
         if (movement == null)
             return;
 
-        Type movementType = movement.GetType();
+        Type movementType =
+            movement.GetType();
 
-        FieldInfo walkField = movementType.GetField(
-            "_walkSpeed",
-            BindingFlags.NonPublic |
-            BindingFlags.Instance
-        );
+        FieldInfo walkField =
+            movementType.GetField(
+                "_walkSpeed",
+                BindingFlags.NonPublic |
+                BindingFlags.Instance
+            );
 
-        FieldInfo sprintField = movementType.GetField(
-            "_sprintSpeed",
-            BindingFlags.NonPublic |
-            BindingFlags.Instance
-        );
+        FieldInfo sprintField =
+            movementType.GetField(
+                "_sprintSpeed",
+                BindingFlags.NonPublic |
+                BindingFlags.Instance
+            );
 
-        if (walkField == null)
+        if (walkField == null ||
+            sprintField == null)
         {
             Logger.LogWarning(
-                "Could not find PlayerMovement._walkSpeed."
+                "Could not find movement speed fields."
             );
-        }
 
-        if (sprintField == null)
-        {
-            Logger.LogWarning(
-                "Could not find PlayerMovement._sprintSpeed."
-            );
-        }
-
-        if (walkField == null || sprintField == null)
             return;
+        }
 
-        // Get original walk speed
         if (originalWalkSpeed < 0f)
         {
-            object value = walkField.GetValue(movement);
+            object value =
+                walkField.GetValue(movement);
 
             if (value is float)
-            {
                 originalWalkSpeed = (float)value;
-            }
         }
 
-        // Get original sprint speed
         if (originalSprintSpeed < 0f)
         {
-            object value = sprintField.GetValue(movement);
+            object value =
+                sprintField.GetValue(movement);
 
             if (value is float)
-            {
                 originalSprintSpeed = (float)value;
-            }
         }
 
-        // Apply walk speed
         walkField.SetValue(
             movement,
-            originalWalkSpeed * walkMultiplier
+            originalWalkSpeed *
+            walkMultiplier
         );
 
-        // Apply sprint speed
         sprintField.SetValue(
             movement,
-            originalSprintSpeed * sprintMultiplier
+            originalSprintSpeed *
+            sprintMultiplier
         );
     }
-
-    // =========================================================
-    // RESET MOVEMENT SPEED
-    // =========================================================
 
     private void ResetMovementSpeed()
     {
-        object movement = GetMovement();
+        object movement =
+            GetMovement();
 
         if (movement == null)
             return;
 
-        Type movementType = movement.GetType();
+        Type movementType =
+            movement.GetType();
 
-        FieldInfo walkField = movementType.GetField(
-            "_walkSpeed",
-            BindingFlags.NonPublic |
-            BindingFlags.Instance
-        );
+        FieldInfo walkField =
+            movementType.GetField(
+                "_walkSpeed",
+                BindingFlags.NonPublic |
+                BindingFlags.Instance
+            );
 
-        FieldInfo sprintField = movementType.GetField(
-            "_sprintSpeed",
-            BindingFlags.NonPublic |
-            BindingFlags.Instance
-        );
+        FieldInfo sprintField =
+            movementType.GetField(
+                "_sprintSpeed",
+                BindingFlags.NonPublic |
+                BindingFlags.Instance
+            );
 
         if (walkField != null &&
             originalWalkSpeed >= 0f)
@@ -695,36 +834,46 @@ public class Plugin : BaseUnityPlugin
     }
 
     // =========================================================
-    // SAVE POSITION
+    // PLAYER POSITION
     // =========================================================
+
+    private Transform GetPlayerTransform()
+    {
+        object player =
+            GetLocalPlayer();
+
+        if (player == null)
+            return null;
+
+        Component component =
+            player as Component;
+
+        if (component == null)
+            return null;
+
+        return component.transform;
+    }
 
     private void SavePlayerPosition()
     {
-        Transform playerTransform = GetPlayerTransform();
+        Transform playerTransform =
+            GetPlayerTransform();
 
         if (playerTransform == null)
-        {
-            Logger.LogWarning(
-                "Could not save position: player not found."
-            );
-
             return;
-        }
 
-        savedPosition = playerTransform.position;
+        savedPosition =
+            playerTransform.position;
+
         hasSavedPosition = true;
 
         Logger.LogInfo(
             string.Format(
-                "Saved player position: {0}",
+                "Saved position: {0}",
                 savedPosition
             )
         );
     }
-
-    // =========================================================
-    // RETURN TO SAVED POSITION
-    // =========================================================
 
     private void ReturnToSavedPosition()
     {
@@ -737,29 +886,25 @@ public class Plugin : BaseUnityPlugin
             return;
         }
 
-        Transform playerTransform = GetPlayerTransform();
+        Transform playerTransform =
+            GetPlayerTransform();
 
         if (playerTransform == null)
-        {
-            Logger.LogWarning(
-                "Could not teleport: player not found."
-            );
-
             return;
-        }
 
-        playerTransform.position = savedPosition;
+        playerTransform.position =
+            savedPosition;
 
         Logger.LogInfo(
             string.Format(
-                "Teleported player to: {0}",
+                "Returned to position: {0}",
                 savedPosition
             )
         );
     }
 
     // =========================================================
-    // FIND TYPE
+    // FIND TYPES
     // =========================================================
 
     private Type FindType(string typeName)
@@ -771,7 +916,8 @@ public class Plugin : BaseUnityPlugin
         {
             try
             {
-                Type type = assembly.GetType(typeName);
+                Type type =
+                    assembly.GetType(typeName);
 
                 if (type != null)
                     return type;
@@ -785,7 +931,8 @@ public class Plugin : BaseUnityPlugin
         {
             try
             {
-                Type[] types = assembly.GetTypes();
+                Type[] types =
+                    assembly.GetTypes();
 
                 foreach (Type type in types)
                 {
