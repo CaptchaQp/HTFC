@@ -22,8 +22,7 @@ public class Plugin : BaseUnityPlugin
     {
         "Player",
         "Fishing",
-        "Inventory",
-        "Teleport",
+        "Casino",
         "Misc"
     };
 
@@ -222,14 +221,10 @@ public class Plugin : BaseUnityPlugin
                 break;
 
             case 2:
-                DrawInventoryTab();
+                DrawCasinoTab();
                 break;
 
             case 3:
-                DrawTeleportTab();
-                break;
-
-            case 4:
                 DrawMiscTab();
                 break;
         }
@@ -553,80 +548,22 @@ public class Plugin : BaseUnityPlugin
     }
 
     // =========================================================
-    // INVENTORY
+    // CASINO
     // =========================================================
 
-    private void DrawInventoryTab()
+    private void DrawCasinoTab()
     {
         GUILayout.Label(
-            "INVENTORY",
+            "CASINO",
             titleStyle
         );
 
         GUILayout.Space(10);
 
         GUILayout.Label(
-            "Inventory features will be added here.",
+            "Casino features will be added here.",
             labelStyle
         );
-    }
-
-    // =========================================================
-    // TELEPORT
-    // =========================================================
-
-    private void DrawTeleportTab()
-    {
-        GUILayout.Label(
-            "TELEPORT",
-            titleStyle
-        );
-
-        GUILayout.Space(10);
-
-        Transform playerTransform =
-            GetPlayerTransform();
-
-        if (playerTransform != null)
-        {
-            Vector3 pos =
-                playerTransform.position;
-
-            GUILayout.Label(
-                string.Format(
-                    "Current Position: {0:0.00}, {1:0.00}, {2:0.00}",
-                    pos.x,
-                    pos.y,
-                    pos.z
-                ),
-                labelStyle
-            );
-
-            GUILayout.Space(10);
-
-            if (GUILayout.Button(
-                "Save Current Position",
-                buttonStyle,
-                GUILayout.Width(220)))
-            {
-                SavePlayerPosition();
-            }
-
-            if (GUILayout.Button(
-                "Teleport To Saved Position",
-                buttonStyle,
-                GUILayout.Width(220)))
-            {
-                ReturnToSavedPosition();
-            }
-        }
-        else
-        {
-            GUILayout.Label(
-                "Player not found.",
-                labelStyle
-            );
-        }
     }
 
     // =========================================================
