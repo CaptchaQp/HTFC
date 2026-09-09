@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using BepInEx;
 using BepInEx.Unity.Mono;
+using HarmonyLib;
 using UnityEngine;
 
 [BepInPlugin("com.newmc.howtofishcheat", "HowToFish Cheat", "1.0.0")]
@@ -47,6 +48,15 @@ public class Plugin : BaseUnityPlugin
     private float moneyTimer = 0f;
 
     // =========================================================
+    // CASINO
+    // =========================================================
+
+    private bool onlyRollGreen = false;
+
+    private static Plugin instance;
+    private Harmony harmony;
+
+    // =========================================================
     // GUI STYLES
     // =========================================================
 
@@ -67,7 +77,13 @@ public class Plugin : BaseUnityPlugin
 
     private void Awake()
     {
-        Logger.LogInfo("HowToFish Cheat loaded!");
+        instance = this;
+
+        Logger.LogInfo(
+            "HowToFish Cheat loaded!"
+        );
+
+        TryPatchCasino();
     }
 
     // =========================================================
@@ -176,7 +192,9 @@ public class Plugin : BaseUnityPlugin
         GUILayout.BeginHorizontal();
 
         // LEFT SIDE
-        GUILayout.BeginVertical(GUILayout.Width(145));
+        GUILayout.BeginVertical(
+            GUILayout.Width(145)
+        );
 
         GUILayout.Space(5);
 
@@ -245,7 +263,10 @@ public class Plugin : BaseUnityPlugin
 
     private void DrawPlayerTab()
     {
-        GUILayout.Label("PLAYER", titleStyle);
+        GUILayout.Label(
+            "PLAYER",
+            titleStyle
+        );
 
         GUILayout.Space(8);
 
@@ -310,12 +331,17 @@ public class Plugin : BaseUnityPlugin
         GUILayout.EndHorizontal();
 
         if (Mathf.Abs(
-            newWalkMultiplier - walkMultiplier) > 0.001f ||
+            newWalkMultiplier -
+            walkMultiplier) > 0.001f ||
             Mathf.Abs(
-            newSprintMultiplier - sprintMultiplier) > 0.001f)
+            newSprintMultiplier -
+            sprintMultiplier) > 0.001f)
         {
-            walkMultiplier = newWalkMultiplier;
-            sprintMultiplier = newSprintMultiplier;
+            walkMultiplier =
+                newWalkMultiplier;
+
+            sprintMultiplier =
+                newSprintMultiplier;
 
             ApplyMovementSpeed();
         }
@@ -450,7 +476,9 @@ public class Plugin : BaseUnityPlugin
 
         if (newInfiniteMoney != infiniteMoney)
         {
-            infiniteMoney = newInfiniteMoney;
+            infiniteMoney =
+                newInfiniteMoney;
+
             moneyTimer = 0f;
         }
     }
@@ -561,9 +589,133 @@ public class Plugin : BaseUnityPlugin
         GUILayout.Space(10);
 
         GUILayout.Label(
-            "Casino features will be added here.",
-            labelStyle
+            "ROULETTE",
+            headerStyle
         );
+
+        GUILayout.Space(5);
+
+        bool newOnlyRollGreen =
+            GUILayout.Toggle(
+                onlyRollGreen,
+                "Only Roll Green"
+            );
+
+        if (newOnlyRollGreen != onlyRollGreen)
+        {
+            onlyRollGreen =
+                newOnlyRollGreen;
+
+            Logger.LogInfo(
+                "Only Roll Green: " +
+                onlyRollGreen.ToString()
+            );
+        }
+    }
+
+    // =========================================================
+    // CASINO PATCH
+    // =========================================================
+
+    private void TryPatchCasino()
+    {
+        try
+        {
+            Type casinoManagerType =
+                FindType("CasinoManager");
+
+            if (casinoManagerType == null)
+            {
+                Logger.LogWarning(
+                    "Could not find CasinoManager."
+                );
+
+                return;
+            }
+
+            MethodInfo rouletteMethod =
+                casinoManagerType.GetMethod(
+                    "ServerRouletteResult",
+                    BindingFlags.Public |
+                    BindingFlags.NonPublic |
+                    BindingFlags.Instance |
+                    BindingFlags.Static
+                );
+
+            if (rouletteMethod == null)
+            {
+                Logger.LogWarning(
+                    "Could not find CasinoManager.ServerRouletteResult."
+                );
+
+                return;
+            }
+
+            harmony =
+                new Harmony(
+                    "com.newmc.howtofishcheat.casino"
+                );
+
+            harmony.Patch(
+                rouletteMethod,
+                prefix: new HarmonyMethod(
+                    typeof(Plugin),
+                    nameof(CasinoRoulettePrefix)
+                )
+            );
+
+            Logger.LogInfo(
+                "Casino roulette patch applied."
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                "Casino patch failed: " +
+                ex.ToString()
+            );
+        }
+    }
+
+    private static void CasinoRoulettePrefix(
+        object[] __args
+    )
+    {
+        try
+        {
+            if (instance == null)
+                return;
+
+            if (!instance.onlyRollGreen)
+                return;
+
+            if (__args == null ||
+                __args.Length == 0)
+            {
+                return;
+            }
+
+            Type betColorType =
+                __args[0].GetType();
+
+            object green =
+                Enum.Parse(
+                    betColorType,
+                    "Green"
+                );
+
+            __args[0] = green;
+        }
+        catch (Exception ex)
+        {
+            if (instance != null)
+            {
+                instance.Logger.LogError(
+                    "Casino green roll failed: " +
+                    ex.Message
+                );
+            }
+        }
     }
 
     // =========================================================
@@ -694,7 +846,8 @@ public class Plugin : BaseUnityPlugin
                 walkField.GetValue(movement);
 
             if (value is float)
-                originalWalkSpeed = (float)value;
+                originalWalkSpeed =
+                    (float)value;
         }
 
         if (originalSprintSpeed < 0f)
@@ -703,7 +856,8 @@ public class Plugin : BaseUnityPlugin
                 sprintField.GetValue(movement);
 
             if (value is float)
-                originalSprintSpeed = (float)value;
+                originalSprintSpeed =
+                    (float)value;
         }
 
         walkField.SetValue(
