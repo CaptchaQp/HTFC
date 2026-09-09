@@ -1,0 +1,803 @@
+using System;
+using System.Reflection;
+using BepInEx;
+using BepInEx.Unity.Mono;
+using UnityEngine;
+
+[BepInPlugin("com.newmc.howtofishcheat", "HowToFish Cheat", "1.0.0")]
+public class Plugin : BaseUnityPlugin
+{
+    private bool menuOpen = false;
+    private bool stylesCreated = false;
+
+    private Rect windowRect = new Rect(50, 50, 650, 430);
+
+    private int currentTab = 0;
+
+    private readonly string[] tabs =
+    {
+        "Player",
+        "Fishing",
+        "Inventory",
+        "Teleport",
+        "Misc"
+    };
+
+    // Player settings
+    private float walkMultiplier = 1.0f;
+    private float sprintMultiplier = 1.0f;
+
+    private float originalWalkSpeed = -1f;
+    private float originalSprintSpeed = -1f;
+
+    // Saved position
+    private Vector3 savedPosition;
+    private bool hasSavedPosition = false;
+
+    // GUI styles
+    private GUIStyle windowStyle;
+    private GUIStyle titleStyle;
+    private GUIStyle tabStyle;
+    private GUIStyle activeTabStyle;
+    private GUIStyle headerStyle;
+    private GUIStyle labelStyle;
+    private GUIStyle valueStyle;
+    private GUIStyle buttonStyle;
+    private GUIStyle footerStyle;
+    private GUIStyle boxStyle;
+
+    private void Awake()
+    {
+        Logger.LogInfo("HowToFish Cheat loaded!");
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.F2))
+        {
+            menuOpen = !menuOpen;
+        }
+    }
+
+    private void OnGUI()
+    {
+        if (!menuOpen)
+            return;
+
+        if (!stylesCreated)
+        {
+            CreateStyles();
+            stylesCreated = true;
+        }
+
+        windowRect = GUI.Window(
+            12345,
+            windowRect,
+            DrawWindow,
+            "How To Fish Cheat",
+            windowStyle
+        );
+    }
+
+    private void CreateStyles()
+    {
+        windowStyle = new GUIStyle(GUI.skin.window);
+        windowStyle.fontSize = 18;
+        windowStyle.fontStyle = FontStyle.Bold;
+        windowStyle.padding = new RectOffset(12, 12, 35, 12);
+
+        titleStyle = new GUIStyle(GUI.skin.label);
+        titleStyle.fontSize = 20;
+        titleStyle.fontStyle = FontStyle.Bold;
+        titleStyle.alignment = TextAnchor.MiddleLeft;
+
+        tabStyle = new GUIStyle(GUI.skin.button);
+        tabStyle.fontSize = 14;
+        tabStyle.alignment = TextAnchor.MiddleLeft;
+        tabStyle.padding = new RectOffset(15, 8, 8, 8);
+
+        activeTabStyle = new GUIStyle(tabStyle);
+        activeTabStyle.fontStyle = FontStyle.Bold;
+
+        headerStyle = new GUIStyle(GUI.skin.label);
+        headerStyle.fontSize = 15;
+        headerStyle.fontStyle = FontStyle.Bold;
+        headerStyle.padding = new RectOffset(0, 8, 5, 5);
+
+        labelStyle = new GUIStyle(GUI.skin.label);
+        labelStyle.fontSize = 13;
+        labelStyle.padding = new RectOffset(0, 3, 0, 3);
+
+        valueStyle = new GUIStyle(GUI.skin.label);
+        valueStyle.fontSize = 13;
+        valueStyle.fontStyle = FontStyle.Bold;
+        valueStyle.alignment = TextAnchor.MiddleRight;
+
+        buttonStyle = new GUIStyle(GUI.skin.button);
+        buttonStyle.fontSize = 13;
+        buttonStyle.padding = new RectOffset(10, 10, 7, 7);
+
+        footerStyle = new GUIStyle(GUI.skin.label);
+        footerStyle.fontSize = 11;
+        footerStyle.alignment = TextAnchor.MiddleRight;
+
+        boxStyle = new GUIStyle(GUI.skin.box);
+        boxStyle.padding = new RectOffset(12, 12, 10, 10);
+    }
+
+    private void DrawWindow(int windowID)
+    {
+        GUILayout.BeginHorizontal();
+
+        // LEFT TAB MENU
+        GUILayout.BeginVertical(GUILayout.Width(145));
+
+        GUILayout.Space(5);
+
+        for (int i = 0; i < tabs.Length; i++)
+        {
+            GUIStyle style = currentTab == i
+                ? activeTabStyle
+                : tabStyle;
+
+            if (GUILayout.Button(
+                tabs[i],
+                style,
+                GUILayout.Height(38)))
+            {
+                currentTab = i;
+            }
+        }
+
+        GUILayout.FlexibleSpace();
+
+        GUILayout.Label(
+            "F2  -  Toggle Menu",
+            footerStyle
+        );
+
+        GUILayout.EndVertical();
+
+        GUILayout.Space(10);
+
+        // CONTENT
+        GUILayout.BeginVertical(boxStyle);
+
+        switch (currentTab)
+        {
+            case 0:
+                DrawPlayerTab();
+                break;
+
+            case 1:
+                DrawFishingTab();
+                break;
+
+            case 2:
+                DrawInventoryTab();
+                break;
+
+            case 3:
+                DrawTeleportTab();
+                break;
+
+            case 4:
+                DrawMiscTab();
+                break;
+        }
+
+        GUILayout.EndVertical();
+
+        GUILayout.EndHorizontal();
+
+        GUI.DragWindow(new Rect(0, 0, 650, 35));
+    }
+
+    // =========================================================
+    // PLAYER TAB
+    // =========================================================
+
+    private void DrawPlayerTab()
+    {
+        GUILayout.Label("PLAYER", titleStyle);
+
+        GUILayout.Space(8);
+
+        GUILayout.Label("MOVEMENT", headerStyle);
+
+        // Walk speed
+        GUILayout.BeginHorizontal();
+
+        GUILayout.Label(
+            "Walk Speed",
+            labelStyle,
+            GUILayout.Width(120)
+        );
+
+        float newWalkMultiplier = GUILayout.HorizontalSlider(
+            walkMultiplier,
+            0.5f,
+            5.0f,
+            GUILayout.Width(220)
+        );
+
+        GUILayout.Label(
+            string.Format("{0:0.0}x", newWalkMultiplier),
+            valueStyle,
+            GUILayout.Width(50)
+        );
+
+        GUILayout.EndHorizontal();
+
+        // Sprint speed
+        GUILayout.BeginHorizontal();
+
+        GUILayout.Label(
+            "Sprint Speed",
+            labelStyle,
+            GUILayout.Width(120)
+        );
+
+        float newSprintMultiplier = GUILayout.HorizontalSlider(
+            sprintMultiplier,
+            0.5f,
+            5.0f,
+            GUILayout.Width(220)
+        );
+
+        GUILayout.Label(
+            string.Format("{0:0.0}x", newSprintMultiplier),
+            valueStyle,
+            GUILayout.Width(50)
+        );
+
+        GUILayout.EndHorizontal();
+
+        // Apply changed values
+        if (Mathf.Abs(newWalkMultiplier - walkMultiplier) > 0.001f ||
+            Mathf.Abs(newSprintMultiplier - sprintMultiplier) > 0.001f)
+        {
+            walkMultiplier = newWalkMultiplier;
+            sprintMultiplier = newSprintMultiplier;
+
+            ApplyMovementSpeed();
+        }
+
+        GUILayout.Space(15);
+
+        // PLAYER STATE
+        GUILayout.Label("PLAYER STATE", headerStyle);
+
+        if (GUILayout.Button(
+            "Reset Speed",
+            buttonStyle,
+            GUILayout.Width(140)))
+        {
+            ResetMovementSpeed();
+        }
+
+        GUILayout.Space(15);
+
+        // POSITION
+        GUILayout.Label("POSITION", headerStyle);
+
+        Transform playerTransform = GetPlayerTransform();
+
+        if (playerTransform != null)
+        {
+            Vector3 position = playerTransform.position;
+
+            GUILayout.Label(
+                string.Format("X: {0:0.00}", position.x),
+                labelStyle
+            );
+
+            GUILayout.Label(
+                string.Format("Y: {0:0.00}", position.y),
+                labelStyle
+            );
+
+            GUILayout.Label(
+                string.Format("Z: {0:0.00}", position.z),
+                labelStyle
+            );
+
+            GUILayout.Space(5);
+
+            GUILayout.BeginHorizontal();
+
+            if (GUILayout.Button(
+                "Save Position",
+                buttonStyle))
+            {
+                SavePlayerPosition();
+            }
+
+            if (GUILayout.Button(
+                "Return To Saved",
+                buttonStyle))
+            {
+                ReturnToSavedPosition();
+            }
+
+            GUILayout.EndHorizontal();
+
+            if (hasSavedPosition)
+            {
+                GUILayout.Space(5);
+
+                GUILayout.Label(
+                    string.Format(
+                        "Saved: {0:0.00}, {1:0.00}, {2:0.00}",
+                        savedPosition.x,
+                        savedPosition.y,
+                        savedPosition.z
+                    ),
+                    labelStyle
+                );
+            }
+        }
+        else
+        {
+            GUILayout.Label(
+                "Player not found.",
+                labelStyle
+            );
+        }
+    }
+
+    // =========================================================
+    // FISHING TAB
+    // =========================================================
+
+    private void DrawFishingTab()
+    {
+        GUILayout.Label("FISHING", titleStyle);
+
+        GUILayout.Space(10);
+
+        GUILayout.Label(
+            "Fishing features will be added here.",
+            labelStyle
+        );
+
+        GUILayout.Space(10);
+
+        if (GUILayout.Button(
+            "Test Fishing Feature",
+            buttonStyle,
+            GUILayout.Width(200)))
+        {
+            Logger.LogInfo("Fishing button pressed.");
+        }
+    }
+
+    // =========================================================
+    // INVENTORY TAB
+    // =========================================================
+
+    private void DrawInventoryTab()
+    {
+        GUILayout.Label("INVENTORY", titleStyle);
+
+        GUILayout.Space(10);
+
+        GUILayout.Label(
+            "Inventory features will be added here.",
+            labelStyle
+        );
+
+        GUILayout.Space(10);
+
+        if (GUILayout.Button(
+            "Test Inventory Feature",
+            buttonStyle,
+            GUILayout.Width(200)))
+        {
+            Logger.LogInfo("Inventory button pressed.");
+        }
+    }
+
+    // =========================================================
+    // TELEPORT TAB
+    // =========================================================
+
+    private void DrawTeleportTab()
+    {
+        GUILayout.Label("TELEPORT", titleStyle);
+
+        GUILayout.Space(10);
+
+        Transform playerTransform = GetPlayerTransform();
+
+        if (playerTransform != null)
+        {
+            Vector3 pos = playerTransform.position;
+
+            GUILayout.Label(
+                string.Format(
+                    "Current Position: {0:0.00}, {1:0.00}, {2:0.00}",
+                    pos.x,
+                    pos.y,
+                    pos.z
+                ),
+                labelStyle
+            );
+
+            GUILayout.Space(10);
+
+            if (GUILayout.Button(
+                "Save Current Position",
+                buttonStyle,
+                GUILayout.Width(220)))
+            {
+                SavePlayerPosition();
+            }
+
+            if (GUILayout.Button(
+                "Teleport To Saved Position",
+                buttonStyle,
+                GUILayout.Width(220)))
+            {
+                ReturnToSavedPosition();
+            }
+        }
+        else
+        {
+            GUILayout.Label(
+                "Player not found.",
+                labelStyle
+            );
+        }
+    }
+
+    // =========================================================
+    // MISC TAB
+    // =========================================================
+
+    private void DrawMiscTab()
+    {
+        GUILayout.Label("MISC", titleStyle);
+
+        GUILayout.Space(10);
+
+        GUILayout.Label(
+            "Miscellaneous features will be added here.",
+            labelStyle
+        );
+
+        GUILayout.Space(10);
+
+        if (GUILayout.Button(
+            "Test Button",
+            buttonStyle,
+            GUILayout.Width(200)))
+        {
+            Logger.LogInfo("Misc button pressed.");
+        }
+    }
+
+    // =========================================================
+    // FIND LOCAL PLAYER
+    // =========================================================
+
+    private object GetLocalPlayer()
+    {
+        Type playerType = FindType("Player");
+
+        if (playerType == null)
+        {
+            Logger.LogWarning(
+                "Could not find Player type."
+            );
+
+            return null;
+        }
+
+        FieldInfo localPlayerField = playerType.GetField(
+            "LocalPlayer",
+            BindingFlags.Public |
+            BindingFlags.Static
+        );
+
+        if (localPlayerField == null)
+        {
+            Logger.LogWarning(
+                "Could not find Player.LocalPlayer."
+            );
+
+            return null;
+        }
+
+        return localPlayerField.GetValue(null);
+    }
+
+    // =========================================================
+    // FIND PLAYER MOVEMENT
+    // =========================================================
+
+    private object GetMovement()
+    {
+        object player = GetLocalPlayer();
+
+        if (player == null)
+            return null;
+
+        FieldInfo movementField = player.GetType().GetField(
+            "_movement",
+            BindingFlags.NonPublic |
+            BindingFlags.Instance
+        );
+
+        if (movementField == null)
+        {
+            Logger.LogWarning(
+                "Could not find Player._movement."
+            );
+
+            return null;
+        }
+
+        return movementField.GetValue(player);
+    }
+
+    // =========================================================
+    // FIND PLAYER TRANSFORM
+    // =========================================================
+
+    private Transform GetPlayerTransform()
+    {
+        object player = GetLocalPlayer();
+
+        if (player == null)
+            return null;
+
+        Component component = player as Component;
+
+        if (component == null)
+        {
+            Logger.LogWarning(
+                "Player is not a Unity Component."
+            );
+
+            return null;
+        }
+
+        return component.transform;
+    }
+
+    // =========================================================
+    // APPLY MOVEMENT SPEED
+    // =========================================================
+
+    private void ApplyMovementSpeed()
+    {
+        object movement = GetMovement();
+
+        if (movement == null)
+            return;
+
+        Type movementType = movement.GetType();
+
+        FieldInfo walkField = movementType.GetField(
+            "_walkSpeed",
+            BindingFlags.NonPublic |
+            BindingFlags.Instance
+        );
+
+        FieldInfo sprintField = movementType.GetField(
+            "_sprintSpeed",
+            BindingFlags.NonPublic |
+            BindingFlags.Instance
+        );
+
+        if (walkField == null)
+        {
+            Logger.LogWarning(
+                "Could not find PlayerMovement._walkSpeed."
+            );
+        }
+
+        if (sprintField == null)
+        {
+            Logger.LogWarning(
+                "Could not find PlayerMovement._sprintSpeed."
+            );
+        }
+
+        if (walkField == null || sprintField == null)
+            return;
+
+        // Get original walk speed
+        if (originalWalkSpeed < 0f)
+        {
+            object value = walkField.GetValue(movement);
+
+            if (value is float)
+            {
+                originalWalkSpeed = (float)value;
+            }
+        }
+
+        // Get original sprint speed
+        if (originalSprintSpeed < 0f)
+        {
+            object value = sprintField.GetValue(movement);
+
+            if (value is float)
+            {
+                originalSprintSpeed = (float)value;
+            }
+        }
+
+        // Apply walk speed
+        walkField.SetValue(
+            movement,
+            originalWalkSpeed * walkMultiplier
+        );
+
+        // Apply sprint speed
+        sprintField.SetValue(
+            movement,
+            originalSprintSpeed * sprintMultiplier
+        );
+    }
+
+    // =========================================================
+    // RESET MOVEMENT SPEED
+    // =========================================================
+
+    private void ResetMovementSpeed()
+    {
+        object movement = GetMovement();
+
+        if (movement == null)
+            return;
+
+        Type movementType = movement.GetType();
+
+        FieldInfo walkField = movementType.GetField(
+            "_walkSpeed",
+            BindingFlags.NonPublic |
+            BindingFlags.Instance
+        );
+
+        FieldInfo sprintField = movementType.GetField(
+            "_sprintSpeed",
+            BindingFlags.NonPublic |
+            BindingFlags.Instance
+        );
+
+        if (walkField != null &&
+            originalWalkSpeed >= 0f)
+        {
+            walkField.SetValue(
+                movement,
+                originalWalkSpeed
+            );
+        }
+
+        if (sprintField != null &&
+            originalSprintSpeed >= 0f)
+        {
+            sprintField.SetValue(
+                movement,
+                originalSprintSpeed
+            );
+        }
+
+        walkMultiplier = 1.0f;
+        sprintMultiplier = 1.0f;
+
+        Logger.LogInfo(
+            "Movement speed reset."
+        );
+    }
+
+    // =========================================================
+    // SAVE POSITION
+    // =========================================================
+
+    private void SavePlayerPosition()
+    {
+        Transform playerTransform = GetPlayerTransform();
+
+        if (playerTransform == null)
+        {
+            Logger.LogWarning(
+                "Could not save position: player not found."
+            );
+
+            return;
+        }
+
+        savedPosition = playerTransform.position;
+        hasSavedPosition = true;
+
+        Logger.LogInfo(
+            string.Format(
+                "Saved player position: {0}",
+                savedPosition
+            )
+        );
+    }
+
+    // =========================================================
+    // RETURN TO SAVED POSITION
+    // =========================================================
+
+    private void ReturnToSavedPosition()
+    {
+        if (!hasSavedPosition)
+        {
+            Logger.LogWarning(
+                "No saved position."
+            );
+
+            return;
+        }
+
+        Transform playerTransform = GetPlayerTransform();
+
+        if (playerTransform == null)
+        {
+            Logger.LogWarning(
+                "Could not teleport: player not found."
+            );
+
+            return;
+        }
+
+        playerTransform.position = savedPosition;
+
+        Logger.LogInfo(
+            string.Format(
+                "Teleported player to: {0}",
+                savedPosition
+            )
+        );
+    }
+
+    // =========================================================
+    // FIND TYPE
+    // =========================================================
+
+    private Type FindType(string typeName)
+    {
+        Assembly[] assemblies =
+            AppDomain.CurrentDomain.GetAssemblies();
+
+        foreach (Assembly assembly in assemblies)
+        {
+            try
+            {
+                Type type = assembly.GetType(typeName);
+
+                if (type != null)
+                    return type;
+            }
+            catch
+            {
+            }
+        }
+
+        foreach (Assembly assembly in assemblies)
+        {
+            try
+            {
+                Type[] types = assembly.GetTypes();
+
+                foreach (Type type in types)
+                {
+                    if (type.Name == typeName)
+                        return type;
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        return null;
+    }
+}
